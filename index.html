@@ -17,26 +17,30 @@ function bounds(n){return [Math.floor(n/10)*10,Math.min(state.max,Math.ceil(n/10
 function svg(tag,attrs,inner=''){return `<${tag} ${Object.entries(attrs).map(([k,v])=>`${k}="${String(v)}"`).join(' ')}>${inner}</${tag}>`}
 function cube(x,y,s=37){const d=13,stroke='#262626',top='#c9bea5',front='#e2d7bf',side='#b9ad94';return `<polygon points="${x},${y} ${x+d},${y-d} ${x+s+d},${y-d} ${x+s},${y}" fill="${top}" stroke="${stroke}" stroke-width="1.8"/><polygon points="${x+s},${y} ${x+s+d},${y-d} ${x+s+d},${y+s-d} ${x+s},${y+s}" fill="${side}" stroke="${stroke}" stroke-width="1.8"/><rect x="${x}" y="${y}" width="${s}" height="${s}" fill="${front}" stroke="${stroke}" stroke-width="1.8"/>`}
 function rod(x,y,s=36){let out='';for(let i=0;i<10;i++)out+=cube(x+i*s,y,s);return out}
-function dienesSvg(n){const z=Math.floor(n/10),e=n%10;let shapes='';const rodSize=35,unitSize=34;const rowGap=60;for(let i=0;i<z;i++){const col=i%1,row=i;shapes+=rod(18+col*0,18+row*rowGap,rodSize)}const cubesY=18+z*rowGap+10;for(let i=0;i<e;i++){shapes+=cube(18+(i%8)*51,cubesY+Math.floor(i/8)*54,unitSize)}if(n===0)shapes='<text x="240" y="135" text-anchor="middle" font-size="58" fill="#555">0</text>';const h=Math.max(150,cubesY+(e?95:15));return `<svg viewBox="0 0 410 ${h}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${z} Zehnerstangen und ${e} Einerwürfel">${shapes}</svg>`}
+function dienesSvg(n){const z=Math.floor(n/10),e=n%10;let shapes='';const rodSize=35,unitSize=34;const rowGap=60;for(let i=0;i<z;i++){const col=i%1,row=i;shapes+=rod(18+col*0,18+row*rowGap,rodSize)}const cubesY=18+z*rowGap+10;for(let i=0;i<e;i++){shapes+=cube(18+(i%5)*51,cubesY+Math.floor(i/5)*54,unitSize)}if(n===0)shapes='<text x="240" y="135" text-anchor="middle" font-size="58" fill="#555">0</text>';const h=Math.max(150,cubesY+(e?95:15));return `<svg viewBox="0 0 410 ${h}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${z} Zehnerstangen und ${e} Einerwürfel">${shapes}</svg>`}
 function tableHtml(left,middle,right,heads){const values=[left,middle,right];return values.map((v,i)=>`<div class="cell ${i===1?'middle':''}"><span class="head ${i===1?'center':''}">${heads[i]}</span><span class="val ${v===null?'hiddenval':''}">${v===null?'&nbsp;':v}</span></div>`).join('')}
 function lineHtml(){const n=state.n;let [lo,hi]=bounds(n);if($('lineScale').value==='full'){lo=0;hi=state.max}if(lo===hi){lo=Math.max(0,lo-10);hi=Math.min(state.max,hi+10)}const scale=v=>50+(v-lo)/(hi-lo)*900;let out=`<line x1="50" y1="68" x2="950" y2="68" stroke="#333" stroke-width="3"/>`;let step=$('lineScale').value==='full'?10:1;for(let v=lo;v<=hi;v+=step){let x=scale(v);out+=`<line x1="${x}" y1="${step===1&&v%5!==0?60:54}" x2="${x}" y2="82" stroke="#333" stroke-width="2"/>`;if(step===10||v%5===0||v===hi)out+=`<text x="${x}" y="112" text-anchor="middle" font-size="22" fill="#444">${v}</text>`}if(state.reveal.line){let x=scale(n);out+=`<circle cx="${x}" cy="68" r="9" fill="#e33c22"/><text x="${x}" y="40" font-size="25" font-weight="bold" text-anchor="middle" fill="#e33c22">${n}</text>`}return out}
 function renderExplore(){const n=state.n;const [lo,hi]=bounds(n);$('dienesPanel').hidden=!$('showDienes').checked;$('neighborsPanel').hidden=!$('showNeighbors').checked;$('tensPanel').hidden=!$('showTens').checked;$('equationsPanel').hidden=!$('showEquations').checked;$('linePanel').hidden=!$('showLine').checked;$('dienesSvg').outerHTML=`<div id="dienesSvg">${state.reveal.dienes?dienesSvg(n):'<div style="height:210px" aria-label="Freie Fläche für eigene Darstellung"></div>'}</div>`;$('neighbors').innerHTML=tableHtml(state.reveal.neighbors?(n>0?n-1:"–"):null,state.showNumber?n:null,state.reveal.neighbors?(n<state.max?n+1:"–"):null,['V','Zahl','N']);$('tens').innerHTML=tableHtml(state.reveal.tens?lo:null,state.showNumber?n:null,state.reveal.tens?hi:null,['NZ','Zahl','NZ']);let eq1=`${n} + <span class="blank ${state.reveal.equations?'':'open'}">${hi-n}</span> = ${hi}`,eq2=`${n} − <span class="blank ${state.reveal.equations?'':'open'}">${n-lo}</span> = ${lo}`;$('equations').innerHTML=`<div class="eq">${state.showNumber?eq1:eq1.replace(String(n),'&nbsp;')}</div><div class="eq">${state.showNumber?eq2:eq2.replace(String(n),'&nbsp;')}</div>`;$('lineSvg').innerHTML=lineHtml();document.querySelectorAll('[data-reveal]').forEach(b=>{const k=b.dataset.reveal;b.textContent=state.reveal[k]?(k==='dienes'?'Material verdecken':'Lösung verdecken'):(k==='dienes'?'Material zeigen':'Lösung zeigen')})}
 function detectDienes(z,e){
-  // Jede Zehnerstange ist ein zusammenhängender Stab mit exakt zehn
-  // erkennbaren, übereinander angeordneten Einersegmenten.
-  const width=330, rodW=22, cellH=12, top=14, rodGap=8;
+  // Zehnerstangen in maximal fünf Spalten, Einer separat in Fünferreihen.
+  // Die SVG-Höhe wird aus der tatsächlichen Anzahl der Reihen berechnet.
+  const width=330, rodW=22, cellH=12, top=16, rodGap=12;
+  const rodsPerRow=5, rodHeight=cellH*10, rodRowGap=16;
+  const rodRows=Math.ceil(z/rodsPerRow);
   let out='';
   for(let i=0;i<z;i++){
-    const x=12+i*(rodW+rodGap);
-    out+=`<rect x="${x}" y="${top}" width="${rodW}" height="${cellH*10}" fill="#e3d7bd" stroke="#514c44" stroke-width="1.7"/>`;
-    for(let j=1;j<10;j++)out+=`<line x1="${x}" y1="${top+j*cellH}" x2="${x+rodW}" y2="${top+j*cellH}" stroke="#6e6455" stroke-width="1"/>`;
+    const x=18+(i%rodsPerRow)*(rodW+rodGap);
+    const y=top+Math.floor(i/rodsPerRow)*(rodHeight+rodRowGap);
+    out+=`<rect x="${x}" y="${y}" width="${rodW}" height="${rodHeight}" fill="#e3d7bd" stroke="#514c44" stroke-width="1.7"/>`;
+    for(let j=1;j<10;j++)out+=`<line x1="${x}" y1="${y+j*cellH}" x2="${x+rodW}" y2="${y+j*cellH}" stroke="#6e6455" stroke-width="1"/>`;
   }
-  const unitX=12+z*(rodW+rodGap)+12;
+  const unitsTop=top+rodRows*(rodHeight+rodRowGap)+(z?4:0);
   for(let i=0;i<e;i++){
-    const x=unitX+(i%5)*26,y=top+Math.floor(i/5)*28;
-    out+=`<rect x="${x}" y="${y}" width="20" height="20" fill="#e3d7bd" stroke="#514c44" stroke-width="1.5"/>`;
+    const x=18+(i%5)*27,y=unitsTop+Math.floor(i/5)*29;
+    out+=`<rect x="${x}" y="${y}" width="21" height="21" fill="#e3d7bd" stroke="#514c44" stroke-width="1.5"/>`;
   }
-  return `<svg viewBox="0 0 ${width} 155" role="img" aria-label="${z} Zehnerstangen mit jeweils zehn Segmenten und ${e} Einerwürfel">${out}</svg>`;
+  const height=Math.max(95,unitsTop+Math.ceil(e/5)*29+12);
+  return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${z} Zehnerstangen mit jeweils zehn Segmenten und ${e} Einerwürfel">${out}</svg>`;
 }
 function detectLine(n,shown){let lo=Math.floor(n/10)*10,hi=lo+10;if(n%10===0){lo=Math.max(0,n-10);hi=n+10}if(hi>state.max){hi=state.max;lo=Math.max(0,hi-10)}let x=v=>24+(v-lo)/(hi-lo)*270;let out='<line x1="24" y1="70" x2="294" y2="70" stroke="#444" stroke-width="3"/>';for(let v=lo;v<=hi;v++){let xx=x(v);out+=`<line x1="${xx}" y1="${v%5===0?59:64}" x2="${xx}" y2="79" stroke="#444" stroke-width="1.7"/>`;if(v===lo||v===hi||v%5===0)out+=`<text x="${xx}" y="103" font-size="16" text-anchor="middle" fill="#444">${v}</text>`}out+=`<circle cx="${x(shown)}" cy="70" r="7" fill="#d94e32"/><text x="${x(shown)}" y="45" font-size="23" font-weight="bold" text-anchor="middle" fill="#d94e32">${shown}</text>`;return `<svg viewBox="0 0 320 120">${out}</svg>`}
 function makePuzzle(n){
@@ -59,7 +63,7 @@ function makePuzzle(n){
     if(t.kind==='split'){const val=wrong?n+1:n;visual=`<div class="mathline">${z*10} + ${e} = ${val}</div>`;correction=`${z*10} + ${e} = ${n}`}
     if(t.kind==='place'){const zz=wrong?z+1:z;visual=`<div class="pv"><div class="pvhead">Z</div><div class="pvhead">E</div><div class="pvval">${zz}</div><div class="pvval">${e}</div></div>`;correction=`${z} Zehner und ${e} Einer`}
     if(t.kind==='dienes'){const zz=wrong&&e===0?z-1:z;const ee=wrong&&e!==0?(e===9?e-1:e+1):e;visual=detectDienes(zz,ee);correction=`${z} Zehner und ${e} Einer`}
-    if(t.kind==='add'){const first=Math.floor(n/10)*10,second=n-first;const shownSecond=wrong?(second===9?second-1:second+1):second;visual=`<div class="mathline">${first} + ${shownSecond} = ${n}</div>`;correction=`${first} + ${second} = ${n}`}
+    if(t.kind==='add'){const first=Math.max(1,Math.floor(n/2));const second=n-first;const shownSecond=wrong?second+1:second;visual=`<div class="mathline">${first} + ${shownSecond} = ${n}</div>`;correction=`${first} + ${second} = ${n}`}
     return {label:t.label,visual,truth:!wrong,correct:correction}
   }),wrongIndex}}
 function renderDetect(){
