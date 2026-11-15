@@ -33,7 +33,7 @@ function detectDienes(z,e){
   }
   const unitX=12+z*(rodW+rodGap)+12;
   for(let i=0;i<e;i++){
-    const x=unitX+(i%3)*26,y=top+Math.floor(i/3)*28;
+    const x=unitX+(i%5)*26,y=top+Math.floor(i/5)*28;
     out+=`<rect x="${x}" y="${y}" width="20" height="20" fill="#e3d7bd" stroke="#514c44" stroke-width="1.5"/>`;
   }
   return `<svg viewBox="0 0 ${width} 155" role="img" aria-label="${z} Zehnerstangen mit jeweils zehn Segmenten und ${e} Einerwürfel">${out}</svg>`;
@@ -59,7 +59,7 @@ function makePuzzle(n){
     if(t.kind==='split'){const val=wrong?n+1:n;visual=`<div class="mathline">${z*10} + ${e} = ${val}</div>`;correction=`${z*10} + ${e} = ${n}`}
     if(t.kind==='place'){const zz=wrong?z+1:z;visual=`<div class="pv"><div class="pvhead">Z</div><div class="pvhead">E</div><div class="pvval">${zz}</div><div class="pvval">${e}</div></div>`;correction=`${z} Zehner und ${e} Einer`}
     if(t.kind==='dienes'){const zz=wrong&&e===0?z-1:z;const ee=wrong&&e!==0?(e===9?e-1:e+1):e;visual=detectDienes(zz,ee);correction=`${z} Zehner und ${e} Einer`}
-    if(t.kind==='add'){const diff=wrong?1:0;visual=`<div class="mathline">${n} + ${max-n} = ${max-diff}</div>`;correction=`${n} + ${max-n} = ${max}`}
+    if(t.kind==='add'){const first=Math.floor(n/10)*10,second=n-first;const shownSecond=wrong?(second===9?second-1:second+1):second;visual=`<div class="mathline">${first} + ${shownSecond} = ${n}</div>`;correction=`${first} + ${second} = ${n}`}
     return {label:t.label,visual,truth:!wrong,correct:correction}
   }),wrongIndex}}
 function renderDetect(){
